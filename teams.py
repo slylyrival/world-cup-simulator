@@ -1,5 +1,62 @@
+"""Define Team class, the teams in the 2026 WC, and method for making those teams.
+
+Class Team contains attributes for a 2026 WC team.
+Function makeTeam makes a Team instance from the team_data dictionary.
+
+"""
+
 class Team:
-    def __init__(self, name, elo, gf=0, ga=0, pts=0, group = ''):
+    """A class to represent a World Cup team.
+
+    ...
+    Attributes
+    ----------
+    name: str
+        the country name of the team
+    elo: int
+        the elo rating of the team
+    gf: int
+        the goals scored by the team
+    ga: int
+        the goals scored against the team
+    pts: int
+        points scored in the group stage
+    group: str
+        the letter of the group the team belongs to in the group stage
+
+    Methods
+    -------
+    gd():
+        Returns the current goal differential of the team
+
+
+    """
+    def __init__(self,
+                 name: str,
+                 elo: int,
+                 gf: int = 0,
+                 ga: int = 0,
+                 pts: int = 0,
+                 group: str = ''):
+        """
+        Constructs all the necessary attributes for the Team object.
+
+        Parameters
+        ----------        
+        name: str
+            the country name of the team
+        elo: int
+            the elo rating of the team
+        gf: int
+            the goals scored by the team
+        ga: int
+            the goals scored against the team
+        pts: int
+            points scored in the group stage
+        group: str
+            the letter of the group the team belongs to in the group stage
+
+        """
         self.name = name
         self.elo = elo
         self.gf = gf
@@ -9,10 +66,37 @@ class Team:
 
     @property
     def gd(self):
+        """
+        Returns goal differntial for the Team.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        (int)
+        """
         # calculates goal difference from GF - GA
         return self.gf - self.ga
 
+def make_team(team_key: str) -> Team:
+    """
+    Return a new Team object
 
+    Parameters
+    ----------
+    team_key (str): the key to team_data dictionary identifying the team
+
+    Returns
+    -------
+    (Team) the new Team
+
+    """
+    name,elo = team_data[team_key]
+    return Team(name, elo)
+
+# This team_data dictionary contains names and elo for all the 2026 WC teams.
 team_data = {
     # Group A
     "Mexico": ("Mexico", 1849),
@@ -86,9 +170,4 @@ team_data = {
     "Ghana": ("Ghana", 1673),
     "Panama": ("Panama", 1742),
 }
-
-
-def make_team(team_key):
-    name,elo = team_data[team_key]
-    return Team(name, elo)
 

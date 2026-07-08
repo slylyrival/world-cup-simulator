@@ -5,11 +5,16 @@ import pickle
 
 from groups import *
 
-K = 0.5
+# Expected goals scored by a team given by lambda = MU * e^(K*delta)
+# delta: elo difference between teams
+# MU: Baseline goals scored per team given equal elo
+# K: Sensitivity to elo differences. Bigger K means better team is more dominant
+# MU and K are constant across teams and matchups.
 MU = 1.35
+K = 0.5
+
 
 THIRD_PLACE_DICT = {}
-
 with open("third_place_table.txt") as f:
     for line in f:
         x = line.split()
@@ -17,12 +22,9 @@ with open("third_place_table.txt") as f:
         ordered_matchups = [g[-1] for g in x[9:17]]
         THIRD_PLACE_DICT[advancing_groups] = ordered_matchups
 
-def simulate_game(teams):
+def simulate_game(teams) -> list[int]:
     team_a = teams[0]
     team_b = teams[1]
-
-    K = 0.5
-    MU = 1.35
 
     delta = (team_a.elo - team_b.elo)/400
     lambda_a = MU * math.exp(K*delta)
@@ -58,7 +60,7 @@ def simulate_game(teams):
 
     return scoreline
 
-def simulate_group(group):
+def simulate_group(group) -> Group:
     pts_team1 = 0
     pts_team2 = 0
     pts_team3 = 0
@@ -75,11 +77,9 @@ def simulate_group(group):
         scoreline = simulate_game(matchup)
         add_group_game_results(matchup[0], matchup[1], scoreline)
 
-    group.teams = sort_group(group.teams)
+    group.sort_group()
 
     return group
-
-
 
 def add_group_game_results(team1, team2, scoreline):
     team1.gf += scoreline[0]
@@ -108,14 +108,6 @@ def print_group_results(group):
               team.ga, " GA")
     print("\n")
 
-def sort_group(group):
-    # I'm just going to pretend tie breaking criteria are GD, GF, GA, and coin toss in that order. This is not what it actually is. It does not matter for this simulation (probably).
-    sorted_group = sorted(
-            group,
-            key=lambda g: (g.pts, g.gd, g.gf, -g.ga),
-            reverse=True
-        )
-    return sorted_group
 
 def get_third_place_teams(groups):
     

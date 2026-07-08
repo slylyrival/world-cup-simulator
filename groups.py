@@ -1,7 +1,66 @@
+
+"""Define Group class and a method for initializing the teams in the 2026 WC.
+
+Class Group contains the group name and the teams in the group.
+
+Function initialize_groups creates and populates new Group instances for the 2026 WC.
+
+"""
+
 from teams import *
 
 class Group:
-    def __init__(self, name, team1, team2, team3, team4):
+    """A class to represent a World Cup group.
+
+    ...
+    Attributes
+    ----------
+    name: str
+        the name of the group (e.g., 'Group A')
+    team1: Team
+        the first team in the group
+    team2: Team
+        the second team in the group
+    team3: Team
+        the third team in the group
+    team4: Team
+        the fourth team in the group
+    teams: list[Team]
+        a list of the four teams in the group
+
+    Methods
+    -------
+    gd():
+        Returns the current goal differential of the team
+
+
+    """
+    def __init__(self,
+                 name: str,
+                 team1: Team,
+                 team2: Team,
+                 team3: Team,
+                 team4: Team):
+        """
+        Constructs all the necessary attributes for the Group object.
+
+        Parameters
+        ----------        
+        name: str
+            the name of the group (e.g., 'Group A')
+        team1: Team
+            the first team in the group
+        team2: Team
+            the second team in the group
+        team3: Team
+            the third team in the group
+        team4: Team
+            the fourth team in the group
+        teams: list[Team]
+            a list of the four teams in the group
+
+        """
+
         self.name = name
         self.team1 = team1
         self.team2 = team2
@@ -12,7 +71,41 @@ class Group:
                       self.team3,
                       self.team4]
 
-def initialize_groups():
+    def sort_group(self):
+        """
+        Modifies the group's teams list in place to sort according to points
+        and tie-breaking criteria.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None 
+
+        """
+
+        # I'm just going to pretend tie breaking criteria are GD, GF, GA, and coin toss in that order. This is not what it actually is. It does not matter for this simulation (probably).
+        self.teams = sorted(
+                self.teams,
+                key=lambda g: (g.pts, g.gd, g.gf, -g.ga, random.random()),
+                reverse=True
+            )
+
+def initialize_groups() -> list[Group]:
+    """
+    Creates a list of Group objects with initialized Teams for the 2026 WC.
+
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    groups (list[Group]): List of 2026 World Cup Groups.
+
+    """
     groups = [
         Group(
             "Group A",
@@ -99,6 +192,7 @@ def initialize_groups():
             make_team("Panama"),
         ),
     ]
+    
     for group in groups:
         for team in group.teams:
             team.group = group.name[-1]
