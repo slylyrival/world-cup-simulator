@@ -1,23 +1,58 @@
-import pickle
-import sys
+"""
+This module provides functions to evaluate and score world cup simulations.
+
+Classes
+-------
+None
+
+Functions
+---------
+build_ev_tables: take all the world simulations and build a table of points
+    scored for group stage orders and knockout stage results
+score_candidate_ev: get the expected value for the score of a candidate simulation
+score_group: return the score of a predicted group against an "actual" group
+get_best_group_orders: return the permutations of a groups teams sorted from
+    highest ev to lowest ev
+
+Other Objects
+-------------
+None
+
+"""
 import itertools
-from collections import Counter, defaultdict
+from collections import Counter
 
+def build_ev_tables(
+        worlds: list[list[list[list[str] | str | int]]]
+) -> dict[str, list[list[Counter]] | list[Counter] | Counter]:
+    """
+    This function takes the logs of all the simulated tournament 'worlds' and
+    calculates a dictionary of total points for each group stage order or team
+    result that a candidate can score in.
 
-### CLANKER WROTE THIS SECTION ###
-def build_ev_tables(worlds):
+    Parameters
+    ----------
+    worlds (list[list[list[list[str] | str | int]]]): A list of tourney_logs for
+        all of the simulated tournaments
+
+    Returns
+    -------
+    (dict) Total points for a candidate simulation to receive for each point
+        scoring opportunity evaluated against all possible worlds
+    """
     n = len(worlds)
 
     group_pos = [[Counter() for _ in range(4)] for _ in range(12)]
     group_exact = [Counter() for _ in range(12)]
 
-    ro32 = [Counter() for _ in range(16)]
-    ro16 = [Counter() for _ in range(8)]
-    qf = [Counter() for _ in range(4)]
-    sf = [Counter() for _ in range(2)]
-
-    third = Counter()
-    champ = Counter()
+    kos = (
+            [Counter() for _ in range(16)],
+            [Counter() for _ in range(8)],
+            [Counter() for _ in range(4)],
+            [Counter() for _ in range(2)],
+            Counter(),
+            Counter()
+            )
 
     for world in worlds:
         groups = world[0]
@@ -30,30 +65,45 @@ def build_ev_tables(worlds):
                 group_pos[g][pos][groups[g][pos]] += 1
 
         for i, team in enumerate(world[1]):
-            ro32[i][team] += 1
+            kos[0][i][team] += 1
         for i, team in enumerate(world[2]):
-            ro16[i][team] += 1
+            kos[1][i][team] += 1
         for i, team in enumerate(world[3]):
-            qf[i][team] += 1
+            kos[2][i][team] += 1
         for i, team in enumerate(world[4]):
-            sf[i][team] += 1
+            kos[3][i][team] += 1
 
-        third[world[5]] += 1
-        champ[world[6]] += 1
+        kos[4][world[5]] += 1
+        kos[5][world[6]] += 1
 
     return {
         "n": n,
         "group_pos": group_pos,
         "group_exact": group_exact,
-        "ro32": ro32,
-        "ro16": ro16,
-        "qf": qf,
-        "sf": sf,
-        "third": third,
-        "champ": champ,
+        "ro32": kos[0],
+        "ro16": kos[1],
+        "qf": kos[2],
+        "sf": kos[3],
+        "third": kos[4],
+        "champ": kos[5],
     }
 
-def score_candidate_ev(candidate, tables):
+def score_candidate_ev(
+    candidate: list[list[list[str] | str | int]],
+    tables: dict
+) -> int:
+    """
+    This function scores a candidate tournament log against the EV table.
+
+    Parameters
+    ----------
+    candidate (list[list[list[str] | str | int]]): The tourney_log of the
+        candidate tournament.
+    
+    Returns
+    -------
+    ev (int): the expected value of the score of the candidate entry.
+    """
     n = tables["n"]
     ev = 0
 
@@ -83,28 +133,23 @@ def score_candidate_ev(candidate, tables):
     ev += 16 * tables["champ"][candidate[6]] / n
 
     return ev
-### END CLANKER WRITTEN SECTION ###
 
+def score_group(predicted: list[str], actual: list[str]) -> int:
+    """
+    Return the group stage score for a given group order against an 'actual' order.
 
-def score_group_stage(candidate, world):
+    Parameters
+    ----------
+    predicted (list[str]): a list of team names representing a possible permutation
+        of group stage results
+    actual (list[str]): a list of team names representing the actual results from
+        a given simulation
 
-    candidate_groups = candidate[0]
-    world_groups = world[0]
-    
-    score = 0
-
-    for j, candidate_group in enumerate(candidate_groups):
-        group_score = 0
-        for i in range(4):
-            if candidate_group[i] == world_groups[j][i]:
-                score += 1
-                group_score += 1
-        if group_score == 4:
-            score +=3
-
-    return score
-
-def score_group(predicted, actual):
+    Returns
+    -------
+    score (int): the score of the predicted group order evaluated against the
+        actual order
+    """
     score = 0
     correct_positions = 0
 
@@ -118,14 +163,30 @@ def score_group(predicted, actual):
 
     return score
 
-def get_best_group_orders(group_index, worlds):
-    actual_orders = [world[0][group_index] for world in worlds]
+def get_best_group_orders(
+    group_index: int,
+    worlds: list[list[list[list[str] | str | int]]]
+) -> list[tuple[int, list[str]]]:
+    """
+    Sort the permutations of a group's rankings by highest group stage EV.
 
-    teams = actual_orders[0]
+    Parameters
+    ----------
+    group_index (int): an index for which group to evaluate (0=A, 1=B, etc.)
+    worlds (list[list[list[list[str] | str | int]]]): a list of tourney logs for
+        all simulated worlds
+
+    Returns
+    -------
+    results (list[tuple[int, list[str]]]): A list of tuples containing the EV
+        and a group ranking permutation for a given group, sorted highest EV
+        to lowest EV.
+    """
+    actual_orders = [world[0][group_index] for world in worlds]
 
     results = []
 
-    for predicted_order in itertools.permutations(teams):
+    for predicted_order in itertools.permutations(actual_orders[0]):
         total = 0
 
         for actual_order in actual_orders:
@@ -135,52 +196,5 @@ def get_best_group_orders(group_index, worlds):
         results.append((ev, predicted_order))
 
     results.sort(reverse=True, key=lambda x: x[0])
+
     return results
-
-def score_candidate(candidate, world):
-
-    candidate_groups = candidate[0]
-    world_groups = world[0]
-    candidate_ro32_winners = candidate[1]
-    world_ro32_winners = world[1]
-    candidate_ro16_winners = candidate[2]
-    world_ro16_winners = world[2]
-    candidate_quarters_winners = candidate[3]
-    world_quarters_winners = world[3]
-    candidate_semi_winners = candidate[4]
-    world_semi_winners = world[4]
-    candidate_third_place = candidate[5]
-    world_third_place = world[5]
-    candidate_champion = candidate[6]
-    world_champion = world[6]
-
-    score = 0
-
-    # Score group stage
-    for j, candidate_group in enumerate(candidate_groups):
-        group_score = 0
-        for i in range(4):
-            if candidate_group[i] == world_groups[j][i]:
-                score += 1
-                group_score += 1
-        if group_score == 4:
-            score +=3
-
-    for i in range(16):
-        if candidate_ro32_winners[i] == world_ro32_winners[i]:
-            score += 2
-
-    for i in range(8):
-        if candidate_ro16_winners[i] == world_ro16_winners[i]:
-            score += 4
-    for i in range(4):
-        if candidate_quarters_winners[i] == world_quarters_winners[i]:
-            score += 6
-    for i in range(2):
-        if candidate_semi_winners[i] == world_semi_winners[i]:
-            score += 8
-    if candidate_third_place == world_third_place:
-        score += 2
-    if candidate_champion == world_champion:
-        score += 16
-    return score

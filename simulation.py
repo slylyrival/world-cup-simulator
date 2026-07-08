@@ -30,11 +30,10 @@ THIRD_PLACE_DICT (dict): a dictionary with the set of advancing third place
 
 
 import math
-import time
 import random
-import pickle
 
-from groups import *
+from teams import Team
+from groups import Group, initialize_groups
 
 # Expected goals scored by a team given by lambda = MU * e^(K*delta)
 # delta: elo difference between teams
@@ -46,7 +45,7 @@ K = 0.5
 
 
 THIRD_PLACE_DICT = {}
-with open("third_place_table.txt") as f:
+with open("third_place_table.txt", "r", encoding="utf-8") as f:
     for line in f:
         x = line.split()
         advancing_groups = frozenset(x[1:9])
@@ -67,46 +66,40 @@ def simulate_game(teams: list[Team]) -> list[int]:
 
     """
 
-    team_a = teams[0]
-    team_b = teams[1]
+    delta = (teams[0].elo - teams[1].elo)/400
+    lambdas = (MU * math.exp(K*delta), MU * math.exp(-1*K*delta))
 
-    delta = (team_a.elo - team_b.elo)/400
-    lambda_a = MU * math.exp(K*delta)
-    lambda_b = MU * math.exp(-1*K*delta)
-
-    p_goals_a = []
-    p_goals_b = []
+    p_goals = [[], []]
 
     # Probabilities of teams scoring up to this many goals are calculated.
     max_goals = 6
 
     for i in range(max_goals): # calculate probabilities up to 6 goals
-        p_goals_a.append((math.exp(-lambda_a) * (lambda_a ** i))/math.factorial(i))
-        p_goals_b.append((math.exp(-lambda_b) * (lambda_b ** i))/math.factorial(i))
+        p_goals[0].append((math.exp(-lambdas[0]) * (lambdas[0] ** i))/math.factorial(i))
+        p_goals[1].append((math.exp(-lambdas[1]) * (lambdas[1] ** i))/math.factorial(i))
 
     # Create cumulative density functions for goals scored by each team.
 
-    cdf_goals_a_unnorm = [sum(p_goals_a[0:x+1]) for x in range(6)]
-    cdf_goals_b_unnorm = [sum(p_goals_b[0:x+1]) for x in range(6)]
-    cdf_goals_a = [x / sum(p_goals_a) for x in cdf_goals_a_unnorm]
-    cdf_goals_b = [x / sum(p_goals_b) for x in cdf_goals_b_unnorm]
-    
-    # Simulated goals scored by each team.
-    rand_goals_a = random.random()
-    rand_goals_b = random.random()
+    cdf_goals = [[], []]
+    cdf_goals[0] = [sum(p_goals[0][0:x+1]) for x in range(6)]
+    cdf_goals[1] = [sum(p_goals[1][0:x+1]) for x in range(6)]
 
-    num_goals_a = None
-    num_goals_b = None
+    cdf_goals_normed = [[], []]
+    cdf_goals_normed[0] = [x / sum(p_goals[0]) for x in cdf_goals[0]]
+    cdf_goals_normed[1] = [x / sum(p_goals[1]) for x in cdf_goals[1]]
+
+    # Simulated goals scored by each team.
+    rand_goals = [random.random(), random.random()]
+
+    scoreline = [None, None]
 
     for i in range(max_goals):
-        if not num_goals_a and rand_goals_a < cdf_goals_a[i]:
-            num_goals_a = i
-        if not num_goals_b and rand_goals_b < cdf_goals_b[i]:
-            num_goals_b = i
-        if num_goals_a and num_goals_b:
+        if not scoreline[0] and rand_goals[0] < cdf_goals_normed[0][i]:
+            scoreline[0] = i
+        if not scoreline[1] and rand_goals[1] < cdf_goals_normed[1][i]:
+            scoreline[1] = i
+        if scoreline[0] and scoreline[1]:
             break
-
-    scoreline = [num_goals_a, num_goals_b]
 
     return scoreline
 
@@ -123,17 +116,12 @@ def simulate_group(group: Group) -> Group:
     group (Group): the group with all teams points and tie-breakers simulated
         and sorted
     """
-    pts_team1 = 0
-    pts_team2 = 0
-    pts_team3 = 0
-    pts_team4 = 0
-
-    pairings = [[group.team1, group.team2],
-                [group.team1, group.team3],
-                [group.team1, group.team4],
-                [group.team2, group.team3],
-                [group.team2, group.team4],
-                [group.team3, group.team4]]
+    pairings = [[group.teams[0], group.teams[1]],
+                [group.teams[0], group.teams[2]],
+                [group.teams[0], group.teams[3]],
+                [group.teams[1], group.teams[2]],
+                [group.teams[1], group.teams[3]],
+                [group.teams[2], group.teams[3]]]
 
     for matchup in pairings:
         scoreline = simulate_game(matchup)
@@ -214,7 +202,7 @@ def get_third_place_teams(groups: list[Group]) -> list[Team]:
         the first place teams from A,B,D,E,G,I,K,L.
 
     """
-    
+
     third_place_teams = [group.teams[2] for group in groups]
 
     # GD, GF, GA, and coinflip are used as tie-breaking criteria.
@@ -258,7 +246,7 @@ def get_random_third_place_teams(groups: list[Group]) -> list[Team]:
 
     sorted_third_place_teams = third_place_teams.copy()
     random.shuffle(sorted_third_place_teams)
-    
+
     top_eight = frozenset([x.group for x in sorted_third_place_teams[0:8]])
 
     ordered_groups = THIRD_PLACE_DICT[top_eight]
@@ -382,7 +370,7 @@ def simulate_knockout(
     ro16_winners = get_ko_round_winners(ro32_winners)
     quarters_winners = get_ko_round_winners(ro16_winners)
     semi_winners = get_ko_round_winners(quarters_winners)
-    semi_losers = [team for team in quarters_winners if team not in semi_winners] 
+    semi_losers = [team for team in quarters_winners if team not in semi_winners]
     third_place_scoreline = simulate_game(semi_losers)
     third_place = semi_losers[get_knockout_winner(third_place_scoreline)]
     final_scoreline = simulate_game(semi_winners)
@@ -393,8 +381,6 @@ def simulate_knockout(
                         ro16_winners,
                         quarters_winners,
                         semi_winners,
-                        semi_losers,
-                        third_place_scoreline,
                         third_place,
                         final_scoreline,
                         champion
@@ -416,7 +402,7 @@ def simulate_tournament() -> list[list[list[str] | str | int]]:
     """
 
     groups = [simulate_group(g) for g in initialize_groups()]
- 
+
     knockout_results = simulate_knockout(groups, get_third_place_teams(groups))
 
     tourney_log = get_tourney_log(groups, knockout_results)
@@ -444,28 +430,15 @@ def get_tourney_log(
     tourney_log (list[list[list[str] | str | int]]): a log of the relevant
         results of the entire tournament
     """
-
-
-    ro32_winners = knockout_results[0]
-    third_place_teams = knockout_results[1]
-    ro16_winners = knockout_results[2]
-    quarters_winners = knockout_results[3]
-    semi_winners = knockout_results[4]
-    semi_losers = knockout_results[5]
-    third_place_scoreline = knockout_results[6]
-    third_place = knockout_results[7]
-    final_scoreline = knockout_results[8]
-    champion = knockout_results[9]
-
     group_rankings = [[team.name for team in group.teams] for group in groups]
-
-    ro32_winner_names = [team.name for team in ro32_winners]
-    ro16_winner_names = [team.name for team in ro16_winners]
-    quarters_winner_names = [team.name for team in quarters_winners]
-    semi_winner_names = [team.name for team in semi_winners]
-    third_place_name = third_place.name
-    champ_name = champion.name
-    third_place_advancer_names = [team.name for team in third_place_teams]
+    ro32_winner_names = [team.name for team in knockout_results[0]]
+    ro16_winner_names = [team.name for team in knockout_results[2]]
+    quarters_winner_names = [team.name for team in knockout_results[3]]
+    semi_winner_names = [team.name for team in knockout_results[4]]
+    third_place_name = knockout_results[5].name
+    final_scoreline = knockout_results[6]
+    champ_name = knockout_results[7].name
+    third_place_advancer_names = [team.name for team in knockout_results[1]]
 
     tourney_log = [group_rankings,
                    ro32_winner_names,
