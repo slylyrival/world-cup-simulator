@@ -4,7 +4,9 @@ Class Team contains attributes for a 2026 WC team.
 Function makeTeam makes a Team instance from the team_data dictionary.
 
 """
+from dataclasses import dataclass
 
+@dataclass
 class Team:
     """A class to represent a World Cup team.
 
@@ -31,6 +33,14 @@ class Team:
 
 
     """
+    name: str
+    elo: int
+    gf: int = 0
+    ga: int = 0
+    pts: int = 0
+    group: str = ''
+
+    '''
     def __init__(self,
                  name: str,
                  elo: int,
@@ -63,6 +73,7 @@ class Team:
         self.ga = ga
         self.pts = pts
         self.group = group
+    '''
 
     @property
     def gd(self):
@@ -170,4 +181,3 @@ team_data = {
     "Ghana": ("Ghana", 1673),
     "Panama": ("Panama", 1742),
 }
-

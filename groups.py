@@ -1,4 +1,3 @@
-
 """Define Group class and a method for initializing the teams in the 2026 WC.
 
 Class Group contains the group name and the teams in the group.
@@ -7,9 +6,11 @@ Function initialize_groups creates and populates new Group instances for the 202
 
 """
 
-from teams import *
 import random
+from dataclasses import dataclass
+from teams import Team, make_team
 
+@dataclass
 class Group:
     """A class to represent a World Cup group.
 
@@ -18,59 +19,18 @@ class Group:
     ----------
     name: str
         the name of the group (e.g., 'Group A')
-    team1: Team
-        the first team in the group
-    team2: Team
-        the second team in the group
-    team3: Team
-        the third team in the group
-    team4: Team
-        the fourth team in the group
     teams: list[Team]
         a list of the four teams in the group
 
     Methods
     -------
-    gd():
-        Returns the current goal differential of the team
+    sort_group():
+        Sorts the teams in the group by pts, GD, GF, GA, and cointoss.
 
 
     """
-    def __init__(self,
-                 name: str,
-                 team1: Team,
-                 team2: Team,
-                 team3: Team,
-                 team4: Team):
-        """
-        Constructs all the necessary attributes for the Group object.
-
-        Parameters
-        ----------        
-        name: str
-            the name of the group (e.g., 'Group A')
-        team1: Team
-            the first team in the group
-        team2: Team
-            the second team in the group
-        team3: Team
-            the third team in the group
-        team4: Team
-            the fourth team in the group
-        teams: list[Team]
-            a list of the four teams in the group
-
-        """
-
-        self.name = name
-        self.team1 = team1
-        self.team2 = team2
-        self.team3 = team3
-        self.team4 = team4
-        self.teams = [self.team1,
-                      self.team2,
-                      self.team3,
-                      self.team4]
+    name: str
+    teams: list[Team]
 
     def sort_group(self):
         """
@@ -87,7 +47,9 @@ class Group:
 
         """
 
-        # I'm just going to pretend tie breaking criteria are GD, GF, GA, and coin toss in that order. This is not what it actually is. It does not matter for this simulation (probably).
+        # I'm just going to pretend tie breaking criteria are GD, GF, GA, and
+        # coin toss in that order. This is not what it actually is. It does
+        # not matter for this simulation (probably).
         self.teams = sorted(
                 self.teams,
                 key=lambda g: (g.pts, g.gd, g.gf, -g.ga, random.random()),
@@ -110,90 +72,90 @@ def initialize_groups() -> list[Group]:
     groups = [
         Group(
             "Group A",
-            make_team("Mexico"),
+            [make_team("Mexico"),
             make_team("South Africa"),
             make_team("South Korea"),
-            make_team("Czechia"),
+            make_team("Czechia")],
         ),
         Group(
             "Group B",
-            make_team("Canada"),
+            [make_team("Canada"),
             make_team("Bosnia and Herzegovina"),
             make_team("Qatar"),
-            make_team("Switzerland"),
+            make_team("Switzerland")],
         ),
         Group(
             "Group C",
-            make_team("Brazil"),
+            [make_team("Brazil"),
             make_team("Morocco"),
             make_team("Haiti"),
-            make_team("Scotland"),
+            make_team("Scotland")],
         ),
         Group(
             "Group D",
-            make_team("United States"),
+            [make_team("United States"),
             make_team("Paraguay"),
             make_team("Australia"),
-            make_team("Turkey"),
+            make_team("Turkey")],
         ),
         Group(
             "Group E",
-            make_team("Germany"),
+            [make_team("Germany"),
             make_team("Curacao"),
             make_team("Ivory Coast"),
-            make_team("Ecuador"),
+            make_team("Ecuador")],
         ),
         Group(
             "Group F",
-            make_team("Netherlands"),
+            [make_team("Netherlands"),
             make_team("Japan"),
             make_team("Sweden"),
-            make_team("Tunisia"),
+            make_team("Tunisia")],
         ),
         Group(
             "Group G",
-            make_team("Belgium"),
+            [make_team("Belgium"),
             make_team("Egypt"),
             make_team("Iran"),
-            make_team("New Zealand"),
+            make_team("New Zealand")],
         ),
         Group(
             "Group H",
-            make_team("Spain"),
+            [make_team("Spain"),
             make_team("Cape Verde"),
             make_team("Saudi Arabia"),
-            make_team("Uruguay"),
+            make_team("Uruguay")],
         ),
         Group(
             "Group I",
-            make_team("France"),
+            [make_team("France"),
             make_team("Senegal"),
             make_team("Iraq"),
-            make_team("Norway"),
+            make_team("Norway")],
         ),
         Group(
             "Group J",
-            make_team("Argentina"),
+            [make_team("Argentina"),
             make_team("Algeria"),
             make_team("Austria"),
-            make_team("Jordan"),
+            make_team("Jordan")],
         ),
         Group(
             "Group K",
-            make_team("Portugal"),
+            [make_team("Portugal"),
             make_team("DR Congo"),
             make_team("Uzbekistan"),
-            make_team("Colombia"),
+            make_team("Colombia")],
         ),
         Group(
             "Group L",
-            make_team("England"),
+            [make_team("England"),
             make_team("Croatia"),
             make_team("Ghana"),
-            make_team("Panama"),
+            make_team("Panama")],
         ),
     ]
-    
+
     for group in groups:
         for team in group.teams:
             team.group = group.name[-1]
