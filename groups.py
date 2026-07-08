@@ -8,6 +8,7 @@ Function initialize_groups creates and populates new Group instances for the 202
 """
 
 from teams import *
+import random
 
 class Group:
     """A class to represent a World Cup group.

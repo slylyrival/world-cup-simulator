@@ -4,7 +4,7 @@ from scoring import *
 ### GENERATE WORLDS ###
 print("Generating possible worlds...")
 
-n = 100000 # number of simulations
+n = 1#00000 # number of simulations
 cnt = 0
 simulated_tournaments = []
 
@@ -128,7 +128,7 @@ print("EXPECTED SCORE: ", best_ev)
 print("WINNING ENTRY: ")
 
 for i, group in enumerate(best_entry[0]):
-    print("GROUP", ord(i)+65)
+    print("GROUP", chr(i+65))
     for team in group:
         print(team)
     print("\n")

@@ -154,74 +154,37 @@ def get_random_third_place_teams(groups):
 
     return ordered_teams
 
+def get_ro32_teams(groups, third_place_teams):
 
-def ro32(groups, third_place_teams):
+    ro32_teams = [groups[ 4].teams[0], third_place_teams[3], #1E vs A/B/C/D/F3
+                  groups[ 8].teams[0], third_place_teams[5], #1I vs C/D/F/G/H3
+                  groups[ 0].teams[1], groups[ 1].teams[1] , #2A vs 2B
+                  groups[ 5].teams[0], groups[ 2].teams[1] , #1F vs 2C
+                  groups[10].teams[1], groups[11].teams[1] , #2K vs 2L
+                  groups[ 7].teams[0], groups[ 9].teams[1] , #1H vs 2J
+                  groups[ 3].teams[0], third_place_teams[2], #1D vs B/E/F/I/J3
+                  groups[ 6].teams[0], third_place_teams[4], #1G vs A/E/H/I/J3
+                  groups[ 2].teams[0], groups[ 5].teams[1] , #1C vs 2F
+                  groups[ 4].teams[1], groups[ 8].teams[1] , #2E vs 2I
+                  groups[ 0].teams[0], third_place_teams[0], #1A vs C/E/F/H/I3
+                  groups[11].teams[0], third_place_teams[7], #1L vs E/H/I/J/K3
+                  groups[ 9].teams[0], groups[ 7].teams[1] , #1J vs 2
+                  groups[ 3].teams[1], groups[ 6].teams[1] , #2D vs 2G
+                  groups[ 1].teams[0], third_place_teams[1], #1B vs E/F/G/I/J3
+                  groups[10].teams[0], third_place_teams[6]] #1K vs D/E/I/J/L3
 
-    matchup_74 = [groups[ 4].teams[0], third_place_teams[3]] #1E vs A/B/C/D/F3
-    matchup_77 = [groups[ 8].teams[0], third_place_teams[5]] #1I vs C/D/F/G/H3
-    matchup_73 = [groups[ 0].teams[1], groups[ 1].teams[1]] #2A vs 2B
-    matchup_75 = [groups[ 5].teams[0], groups[ 2].teams[1]] #1F vs 2C
-    matchup_83 = [groups[10].teams[1], groups[11].teams[1]] #2K vs 2L
-    matchup_84 = [groups[ 7].teams[0], groups[ 9].teams[1]] #1H vs 2J
-    matchup_81 = [groups[ 3].teams[0], third_place_teams[2]] #1D vs B/E/F/I/J3
-    matchup_82 = [groups[ 6].teams[0], third_place_teams[4]] #1G vs A/E/H/I/J3
-    matchup_76 = [groups[ 2].teams[0], groups[ 5].teams[1]] #1C vs 2F
-    matchup_78 = [groups[ 4].teams[1], groups[ 8].teams[1]] #2E vs 2I
-    matchup_79 = [groups[ 0].teams[0], third_place_teams[0]] #1A vs C/E/F/H/I3
-    matchup_80 = [groups[11].teams[0], third_place_teams[7]] #1L vs E/H/I/J/K3
-    matchup_86 = [groups[ 9].teams[0], groups[ 7].teams[1]] #1J vs 2H
-    matchup_88 = [groups[ 3].teams[1], groups[ 6].teams[1]] #2D vs 2G
-    matchup_85 = [groups[ 1].teams[0], third_place_teams[1]] #1B vs E/F/G/I/J3
-    matchup_87 = [groups[10].teams[0], third_place_teams[6]] #1K vs D/E/I/J/L3
+    return ro32_teams
 
-    ro32_matchups = [matchup_74, matchup_77,
-                    matchup_73, matchup_75,
-                    matchup_83, matchup_84,
-                    matchup_81, matchup_82,
-                    matchup_76, matchup_78,
-                    matchup_79, matchup_80,
-                    matchup_86, matchup_88,
-                    matchup_85, matchup_87]
+def get_ko_round_winners(teams: list[Team]):
 
     winners = []
 
-    for matchup in ro32_matchups:
-        score = simulate_game(matchup)
-        winners.append(matchup[get_knockout_winner(score)])
-    
-    return winners
-
-def ro16(ro32Winners):
-    winners = []
-    for n in range(8):
-        matchup = [ro32Winners[2*n], ro32Winners[2*n+1]]
+    for n in range(len(teams) // 2):
+        matchup = [teams[2*n], teams[2*n+1]]
         score = simulate_game(matchup)
         winners.append(matchup[get_knockout_winner(score)])
 
     return winners
-
-def quarters(ro16Winners):
-    winners = []
-    for n in range(4):
-        matchup = [ro16Winners[2*n], ro16Winners[2*n+1]]
-        score = simulate_game(matchup)
-        winners.append(matchup[get_knockout_winner(score)])
-
-    return winners
-
-def semis(quartersWinners):
-    winners = []
-    losers = [] # for 3rd place match
-    for n in range(2):
-        matchup = [quartersWinners[2*n], quartersWinners[2*n+1]]
-        score = simulate_game(matchup)
-        winner = get_knockout_winner(score)
-        loser = 1 - winner # 1 if 0, 0 if 1
-        winners.append(matchup[winner])
-        losers.append(matchup[loser])
-    return winners, losers
-
-
 
 def get_knockout_winner(score):
     if score[0] == score[1]:
@@ -239,10 +202,12 @@ def get_knockout_winner(score):
 
 def simulate_knockout(groups, third_place_teams):
 
-    ro32_winners = ro32(groups, third_place_teams)
-    ro16_winners = ro16(ro32_winners)
-    quarters_winners = quarters(ro16_winners)
-    semi_winners, semi_losers = semis(quarters_winners)
+    ro32_teams = get_ro32_teams(groups, third_place_teams)
+    ro32_winners = get_ko_round_winners(ro32_teams)
+    ro16_winners = get_ko_round_winners(ro32_winners)
+    quarters_winners = get_ko_round_winners(ro16_winners)
+    semi_winners = get_ko_round_winners(quarters_winners)
+    semi_losers = [team for team in quarters_winners if team not in semi_winners] 
     third_place_scoreline = simulate_game(semi_losers)
     third_place = semi_losers[get_knockout_winner(third_place_scoreline)]
     final_scoreline = simulate_game(semi_winners)
