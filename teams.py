@@ -40,41 +40,6 @@ class Team:
     pts: int = 0
     group: str = ''
 
-    '''
-    def __init__(self,
-                 name: str,
-                 elo: int,
-                 gf: int = 0,
-                 ga: int = 0,
-                 pts: int = 0,
-                 group: str = ''):
-        """
-        Constructs all the necessary attributes for the Team object.
-
-        Parameters
-        ----------        
-        name: str
-            the country name of the team
-        elo: int
-            the elo rating of the team
-        gf: int
-            the goals scored by the team
-        ga: int
-            the goals scored against the team
-        pts: int
-            points scored in the group stage
-        group: str
-            the letter of the group the team belongs to in the group stage
-
-        """
-        self.name = name
-        self.elo = elo
-        self.gf = gf
-        self.ga = ga
-        self.pts = pts
-        self.group = group
-    '''
-
     @property
     def gd(self):
         """
