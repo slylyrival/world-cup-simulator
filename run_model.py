@@ -1,4 +1,4 @@
-from generate_worlds import *
+from simulation import *
 from scoring import *
 
 ### GENERATE WORLDS ###
