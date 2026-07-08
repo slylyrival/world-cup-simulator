@@ -1,5 +1,9 @@
-from simulation import *
-from scoring import *
+import sys
+import pickle
+import simulation
+from scoring import build_ev_tables, score_candidate_ev, get_best_group_orders
+from teams import make_team
+from groups import Group
 
 ### GENERATE WORLDS ###
 print("Generating possible worlds...")
@@ -9,10 +13,9 @@ cnt = 0
 simulated_tournaments = []
 
 while cnt < n:
-    entry = simulate_tournament()
+    entry = simulation.simulate_tournament()
     simulated_tournaments.append(entry)
 
-    
     percent = round((cnt / n) * 100,2)
     sys.stdout.write(f'\rProgress: |{percent}|%')
     sys.stdout.flush()
@@ -20,7 +23,7 @@ while cnt < n:
     cnt += 1
 
 with open("save_data.pkl", "wb") as file:
-          pickle.dump(simulated_tournaments, file)
+    pickle.dump(simulated_tournaments, file)
 
 
 ### GET BEST GROUP ORDERS ###
@@ -55,12 +58,7 @@ for group_num, group in enumerate(best_group_orders):
 
         for i, team in enumerate(ordered_teams):
             teams.append(make_team(team))
-        group_orders[rank].append(Group(
-            group_name,
-            teams[0],
-            teams[1],
-            teams[2],
-            teams[3]))
+        group_orders[rank].append(Group(group_name, teams))
 
 group_permutations_to_simulate = []
 
@@ -83,15 +81,14 @@ n = 1000 # number of knockout stage simulations per group stage permutation
 
 tourney_logs = []
 
-for i in range(len(group_permutations_to_simulate)):
+for i, groups in enumerate(group_permutations_to_simulate):
     print("Group permutation ", i, " of ", len(group_permutations_to_simulate), "...")
-    groups = group_permutations_to_simulate[i]
-    third_place_teams = get_random_third_place_teams(groups)
+    third_place_teams = simulation.get_random_third_place_teams(groups)
     cnt = 0
     while cnt < n:
         #groups = group_permutations_to_simulate[i]
-        knockout_results = simulate_knockout(groups, third_place_teams)
-        tourney_log = get_tourney_log(groups, knockout_results)
+        knockout_results = simulation.simulate_knockout(groups, third_place_teams)
+        tourney_log = simulation.get_tourney_log(groups, knockout_results)
         tourney_logs.append(tourney_log)
         cnt += 1
 
@@ -108,7 +105,6 @@ best_entry = None
 best_ev = 0
 
 for i, candidate in enumerate(tourney_logs):
-    
     ev = score_candidate_ev(candidate, tables)
 
     if ev > best_ev:
@@ -166,5 +162,3 @@ print("CHAMPION")
 print(best_entry[6])
 print("FINAL SCORE")
 print(best_entry[7])
-
-
