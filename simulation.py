@@ -28,12 +28,15 @@ THIRD_PLACE_DICT (dict): a dictionary with the set of advancing third place
 
 """
 
-
 import math
 import random
 
+from typing import TypeAlias
 from teams import Team
 from groups import Group, initialize_groups
+
+KnockoutLog: TypeAlias = list[list[Team | int] | Team]
+TournamentLog: TypeAlias = list[list[list[str] | str | int]]
 
 # Expected goals scored by a team given by lambda = MU * e^(K*delta)
 # delta: elo difference between teams
@@ -344,10 +347,11 @@ def get_knockout_winner(score: list[int]) -> int:
 
     return winner
 
+
 def simulate_knockout(
     groups: list[Group],
     third_place_teams: list[Team]
-)-> list[list[Team | int] | Team]:
+)-> KnockoutLog:
     """
     Simulate the knockout stage of the world cup and return results of all
     rounds.
@@ -360,7 +364,7 @@ def simulate_knockout(
 
     Returns
     -------
-    knockout_results (list[list[Team | int] | Team]): a list of lists of the
+    knockout_results (KnockoutLog): a list of lists of the
         winners of each round, the semi-final losers and results
         of the third-place match, and the championship final scoreline.
     """
@@ -387,7 +391,7 @@ def simulate_knockout(
                     ]
     return knockout_results
 
-def simulate_tournament() -> list[list[list[str] | str | int]]:
+def simulate_tournament() -> TournamentLog:
     """
     Initialize all world cup groups and simulate the entire tournament.
 
@@ -397,7 +401,7 @@ def simulate_tournament() -> list[list[list[str] | str | int]]:
 
     Returns
     -------
-    tourney_log (list[list[list[str] | str | int]]): a log of the relevant
+    tourney_log (TournamentLog): a log of the relevant
         results of the entire tournament
     """
 
@@ -412,8 +416,8 @@ def simulate_tournament() -> list[list[list[str] | str | int]]:
 
 def get_tourney_log(
     groups: list[Group],
-    knockout_results: list[list[list[str] | str | int]]
-) -> list[list[list[str] | str | int]]:
+    knockout_results: KnockoutLog,
+) -> TournamentLog:
     """
     Construct a log of the group stage and knockout stage results for the
     entire simulated world cup.

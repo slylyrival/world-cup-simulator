@@ -21,10 +21,14 @@ None
 """
 import itertools
 from collections import Counter
+from typing import TypeAlias
+
+TournamentLog: TypeAlias = list[list[list[str] | str | int]]
+EVTable: TypeAlias = dict[str, list[list[Counter]] | list[Counter] | Counter]
 
 def build_ev_tables(
-        worlds: list[list[list[list[str] | str | int]]]
-) -> dict[str, list[list[Counter]] | list[Counter] | Counter]:
+        worlds: list[TournamentLog]
+) -> EVTable:
     """
     This function takes the logs of all the simulated tournament 'worlds' and
     calculates a dictionary of total points for each group stage order or team
@@ -32,12 +36,12 @@ def build_ev_tables(
 
     Parameters
     ----------
-    worlds (list[list[list[list[str] | str | int]]]): A list of tourney_logs for
+    worlds (list[TournamentLog]): A list of tourney_logs for
         all of the simulated tournaments
 
     Returns
     -------
-    (dict) Total points for a candidate simulation to receive for each point
+    (EVTable) Total points for a candidate simulation to receive for each point
         scoring opportunity evaluated against all possible worlds
     """
     n = len(worlds)
@@ -89,7 +93,7 @@ def build_ev_tables(
     }
 
 def score_candidate_ev(
-    candidate: list[list[list[str] | str | int]],
+    candidate: TournamentLog,
     tables: dict
 ) -> int:
     """
@@ -97,8 +101,10 @@ def score_candidate_ev(
 
     Parameters
     ----------
-    candidate (list[list[list[str] | str | int]]): The tourney_log of the
+    candidate (TournamentLog): The tourney_log of the
         candidate tournament.
+    tables (EVtable): The table of expected values against which to score
+        the candidate
     
     Returns
     -------
@@ -165,7 +171,7 @@ def score_group(predicted: list[str], actual: list[str]) -> int:
 
 def get_best_group_orders(
     group_index: int,
-    worlds: list[list[list[list[str] | str | int]]]
+    worlds: list[TournamentLog]
 ) -> list[tuple[int, list[str]]]:
     """
     Sort the permutations of a group's rankings by highest group stage EV.
@@ -173,7 +179,7 @@ def get_best_group_orders(
     Parameters
     ----------
     group_index (int): an index for which group to evaluate (0=A, 1=B, etc.)
-    worlds (list[list[list[list[str] | str | int]]]): a list of tourney logs for
+    worlds (list[TournamentLog)]: a list of tourney logs for
         all simulated worlds
 
     Returns
