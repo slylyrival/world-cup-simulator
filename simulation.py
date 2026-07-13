@@ -18,7 +18,7 @@ get_ko_round_winners: simulate a knockout round and return winners
 get_knockout_winner: return either 0 or 1 based on scoreline
 simulate_knockout: simulate the knockout stage of the world cup
 simulate_tournament: simulate the entire world cup
-get_tourney_log: construct a log of the results of the simulated WC
+get_tournament_log: construct a log of the results of the simulated WC
 
 
 Other Objects
@@ -28,15 +28,43 @@ THIRD_PLACE_DICT (dict): a dictionary with the set of advancing third place
 
 """
 
+from dataclasses import dataclass
 import math
 import random
-
 from typing import TypeAlias
+
 from teams import Team
 from groups import Group, initialize_groups
 
+
 KnockoutLog: TypeAlias = list[list[Team | int] | Team]
 TournamentLog: TypeAlias = list[list[list[str] | str | int]]
+
+
+@dataclass
+class KnockoutLog:
+    ro32_winners: list[Team]
+    third_place_teams: list[Team]
+    ro16_winners: list[Team]
+    quarters_winners: list[Team]
+    semi_winners: list[Team]
+    third_place: Team
+    final_scoreline: tuple[int, int]
+    champion: Team
+
+
+@dataclass
+class TournamentLog:
+    group_rankings: list[list[str]]
+    third_place_advancer_names: list[str]
+    ro32_winner_names: list[str]
+    ro16_winner_names: list[str]
+    quarters_winner_names: list[str]
+    semi_winner_names: list[str]
+    third_place_name: str
+    champ_name: str
+    final_scoreline: tuple[int, int]
+
 
 # Expected goals scored by a team given by lambda = MU * e^(K*delta)
 # delta: elo difference between teams
@@ -46,7 +74,6 @@ TournamentLog: TypeAlias = list[list[list[str] | str | int]]
 MU = 1.35
 K = 0.5
 
-
 THIRD_PLACE_DICT = {}
 with open("third_place_table.txt", "r", encoding="utf-8") as f:
     for line in f:
@@ -55,7 +82,8 @@ with open("third_place_table.txt", "r", encoding="utf-8") as f:
         ordered_matchups = [g[-1] for g in x[9:17]]
         THIRD_PLACE_DICT[advancing_groups] = ordered_matchups
 
-def simulate_game(teams: list[Team]) -> list[int]:
+
+def simulate_game(teams: list[Team]) -> tuple[int, int]:
     """
     Return the scoreline for a simulated game between two teams.
 
@@ -65,27 +93,31 @@ def simulate_game(teams: list[Team]) -> list[int]:
 
     Returns
     -------
-    scoreline (list[int]): a list of the teams' scores, e.g. [2,0]
+    scoreline (tuple(int, int)): a list of the teams' scores, e.g. [2,0]
 
     """
 
-    delta = (teams[0].elo - teams[1].elo)/400
-    lambdas = (MU * math.exp(K*delta), MU * math.exp(-1*K*delta))
+    delta = (teams[0].elo - teams[1].elo) / 400
+    lambdas = (MU * math.exp(K * delta), MU * math.exp(-1 * K * delta))
 
     p_goals = [[], []]
 
     # Probabilities of teams scoring up to this many goals are calculated.
     max_goals = 6
 
-    for i in range(max_goals): # calculate probabilities up to 6 goals
-        p_goals[0].append((math.exp(-lambdas[0]) * (lambdas[0] ** i))/math.factorial(i))
-        p_goals[1].append((math.exp(-lambdas[1]) * (lambdas[1] ** i))/math.factorial(i))
+    for i in range(max_goals):  # calculate probabilities up to 6 goals
+        p_goals[0].append(
+            (math.exp(-lambdas[0]) * (lambdas[0] ** i)) / math.factorial(i)
+        )
+        p_goals[1].append(
+            (math.exp(-lambdas[1]) * (lambdas[1] ** i)) / math.factorial(i)
+        )
 
     # Create cumulative density functions for goals scored by each team.
 
     cdf_goals = [[], []]
-    cdf_goals[0] = [sum(p_goals[0][0:x+1]) for x in range(6)]
-    cdf_goals[1] = [sum(p_goals[1][0:x+1]) for x in range(6)]
+    cdf_goals[0] = [sum(p_goals[0][0 : x + 1]) for x in range(6)]
+    cdf_goals[1] = [sum(p_goals[1][0 : x + 1]) for x in range(6)]
 
     cdf_goals_normed = [[], []]
     cdf_goals_normed[0] = [x / sum(p_goals[0]) for x in cdf_goals[0]]
@@ -97,14 +129,15 @@ def simulate_game(teams: list[Team]) -> list[int]:
     scoreline = [None, None]
 
     for i in range(max_goals):
-        if not scoreline[0] and rand_goals[0] < cdf_goals_normed[0][i]:
+        if scoreline[0] is None and rand_goals[0] < cdf_goals_normed[0][i]:
             scoreline[0] = i
-        if not scoreline[1] and rand_goals[1] < cdf_goals_normed[1][i]:
+        if scoreline[1] is None and rand_goals[1] < cdf_goals_normed[1][i]:
             scoreline[1] = i
-        if scoreline[0] and scoreline[1]:
+        if scoreline[0] is not None and scoreline[1] is not None:
             break
 
-    return scoreline
+    return tuple(scoreline)
+
 
 def simulate_group(group: Group) -> Group:
     """
@@ -119,12 +152,14 @@ def simulate_group(group: Group) -> Group:
     group (Group): the group with all teams points and tie-breakers simulated
         and sorted
     """
-    pairings = [[group.teams[0], group.teams[1]],
-                [group.teams[0], group.teams[2]],
-                [group.teams[0], group.teams[3]],
-                [group.teams[1], group.teams[2]],
-                [group.teams[1], group.teams[3]],
-                [group.teams[2], group.teams[3]]]
+    pairings = [
+        [group.teams[0], group.teams[1]],
+        [group.teams[0], group.teams[2]],
+        [group.teams[0], group.teams[3]],
+        [group.teams[1], group.teams[2]],
+        [group.teams[1], group.teams[3]],
+        [group.teams[2], group.teams[3]],
+    ]
 
     for matchup in pairings:
         scoreline = simulate_game(matchup)
@@ -134,10 +169,9 @@ def simulate_group(group: Group) -> Group:
 
     return group
 
+
 def add_group_game_results(
-    team1: Team,
-    team2: Team,
-    scoreline: list[int]
+    team1: Team, team2: Team, scoreline: tuple[int, int]
 ) -> None:
     """
     Update the teams' PTS, GF, and GA attributes after a match.
@@ -146,7 +180,7 @@ def add_group_game_results(
     ----------
     team1 (Team): the first team in the matchup
     team2 (Team): the second team in the matchup
-    scoreline (list[int]): the scoreline between the two teams, e.g. [2,0]
+    scoreline (tuple(int, int)): the scoreline between the two teams, e.g. [2,0]
 
     Returns
     -------
@@ -182,10 +216,7 @@ def print_group_results(group: Group) -> None:
     print(group.name)
     print("\n")
     for team in group.teams:
-        print(team.name, ": ",
-              team.pts, " PTS, ",
-              team.gf, " GF, ",
-              team.ga, " GA")
+        print(team.name, ": ", team.pts, " PTS, ", team.gf, " GF, ", team.ga, " GA")
     print("\n")
 
 
@@ -211,22 +242,23 @@ def get_third_place_teams(groups: list[Group]) -> list[Team]:
     # GD, GF, GA, and coinflip are used as tie-breaking criteria.
     # Team conduct is not currently in the model, so it is not used.
     third_place_teams = sorted(
-            third_place_teams,
-            key = lambda t: (t.pts, t.gd, t.gf, -t.ga, random.random()),
-            reverse=True
-        )
+        third_place_teams,
+        key=lambda team: (team.pts, team.gd, team.gf, -team.ga, random.random()),
+        reverse=True,
+    )
 
     # frozenset allows top_eight to be used as dict key.
-    top_eight = frozenset([x.group for x in third_place_teams[0:8]])
+    top_eight = frozenset([team.group for team in third_place_teams[0:8]])
 
     # ordered_groups is the group IDs that will play 1A,1B,1D,1E,1G,1I,1K,1L.
     # For example, if EFGHIJKL advance, then it is [E,J,I,F,H,G,L,K].
     # Then, ordered_teams makes the list of appropriate teams.
     ordered_groups = THIRD_PLACE_DICT[top_eight]
 
-    ordered_teams = [third_place_teams[ord(g)-65] for g in ordered_groups]
+    ordered_teams = [third_place_teams[ord(group) - 65] for group in ordered_groups]
 
     return ordered_teams
+
 
 def get_random_third_place_teams(groups: list[Group]) -> list[Team]:
     """
@@ -254,14 +286,12 @@ def get_random_third_place_teams(groups: list[Group]) -> list[Team]:
 
     ordered_groups = THIRD_PLACE_DICT[top_eight]
 
-    ordered_teams = [third_place_teams[ord(g)-65] for g in ordered_groups]
+    ordered_teams = [third_place_teams[ord(g) - 65] for g in ordered_groups]
 
     return ordered_teams
 
-def get_ro32_teams(
-    groups: list[Group],
-    third_place_teams: list[Team]
-) -> list[Team]:
+
+def get_ro32_teams(groups: list[Group], third_place_teams: list[Team]) -> list[Team]:
     """
     Form a list of RO32 teams such that 2n and 2n+1 play each other in the Ro32.
 
@@ -276,24 +306,26 @@ def get_ro32_teams(
     ro32_teams (list[Team]): the list of Ro32 teams.
     """
 
-    ro32_teams = [groups[ 4].teams[0], third_place_teams[3], # 1E vs A/B/C/D/F3
-                  groups[ 8].teams[0], third_place_teams[5], # 1I vs C/D/F/G/H3
-                  groups[ 0].teams[1], groups[ 1].teams[1] , # 2A vs 2B
-                  groups[ 5].teams[0], groups[ 2].teams[1] , # 1F vs 2C
-                  groups[10].teams[1], groups[11].teams[1] , # 2K vs 2L
-                  groups[ 7].teams[0], groups[ 9].teams[1] , # 1H vs 2J
-                  groups[ 3].teams[0], third_place_teams[2], # 1D vs B/E/F/I/J3
-                  groups[ 6].teams[0], third_place_teams[4], # 1G vs A/E/H/I/J3
-                  groups[ 2].teams[0], groups[ 5].teams[1] , # 1C vs 2F
-                  groups[ 4].teams[1], groups[ 8].teams[1] , # 2E vs 2I
-                  groups[ 0].teams[0], third_place_teams[0], # 1A vs C/E/F/H/I3
-                  groups[11].teams[0], third_place_teams[7], # 1L vs E/H/I/J/K3
-                  groups[ 9].teams[0], groups[ 7].teams[1] , # 1J vs 2
-                  groups[ 3].teams[1], groups[ 6].teams[1] , # 2D vs 2G
-                  groups[ 1].teams[0], third_place_teams[1], # 1B vs E/F/G/I/J3
-                  groups[10].teams[0], third_place_teams[6]] # 1K vs D/E/I/J/L3
+    ro32_teams = [
+        groups[ 4].teams[0], third_place_teams[3], # 1E vs A/B/C/D/F3
+        groups[ 8].teams[0], third_place_teams[5], # 1I vs C/D/F/G/H3
+        groups[ 0].teams[1], groups[1].teams[1],   # 2A vs 2B
+        groups[ 5].teams[0], groups[2].teams[1],   # 1F vs 2C
+        groups[10].teams[1], groups[11].teams[1],  # 2K vs 2L
+        groups[ 7].teams[0], groups[9].teams[1],   # 1H vs 2J
+        groups[ 3].teams[0], third_place_teams[2], # 1D vs B/E/F/I/J3
+        groups[ 6].teams[0], third_place_teams[4], # 1G vs A/E/H/I/J3
+        groups[ 2].teams[0], groups[5].teams[1],   # 1C vs 2F
+        groups[ 4].teams[1], groups[8].teams[1],   # 2E vs 2I
+        groups[ 0].teams[0], third_place_teams[0], # 1A vs C/E/F/H/I3
+        groups[11].teams[0], third_place_teams[7], # 1L vs E/H/I/J/K3
+        groups[ 9].teams[0], groups[7].teams[1],   # 1J vs 2
+        groups[ 3].teams[1], groups[6].teams[1],   # 2D vs 2G
+        groups[ 1].teams[0], third_place_teams[1], # 1B vs E/F/G/I/J3
+        groups[10].teams[0], third_place_teams[6]] # 1K vs D/E/I/J/L3
 
     return ro32_teams
+
 
 def get_ko_round_winners(teams: list[Team]) -> list[Team]:
     """
@@ -313,19 +345,20 @@ def get_ko_round_winners(teams: list[Team]) -> list[Team]:
     winners = []
 
     for n in range(len(teams) // 2):
-        matchup = [teams[2*n], teams[2*n+1]]
+        matchup = [teams[2 * n], teams[2 * n + 1]]
         score = simulate_game(matchup)
         winners.append(matchup[get_knockout_winner(score)])
 
     return winners
 
-def get_knockout_winner(score: list[int]) -> int:
+
+def get_knockout_winner(score: tuple[int, int]) -> int:
     """
     From the scoreline of a match, return the index of the winner in the matchup.
 
     Parameters
     ----------
-    score (list[int]): the scoreline of a fixture, e.g. [2,0].
+    score (tuple(int, int)): the scoreline of a fixture, e.g. [2,0].
 
     Returns
     -------
@@ -349,9 +382,8 @@ def get_knockout_winner(score: list[int]) -> int:
 
 
 def simulate_knockout(
-    groups: list[Group],
-    third_place_teams: list[Team]
-)-> KnockoutLog:
+    groups: list[Group], third_place_teams: list[Team]
+) -> KnockoutLog:
     """
     Simulate the knockout stage of the world cup and return results of all
     rounds.
@@ -364,7 +396,7 @@ def simulate_knockout(
 
     Returns
     -------
-    knockout_results (KnockoutLog): a list of lists of the
+    knockout_log (KnockoutLog): a list of lists of the
         winners of each round, the semi-final losers and results
         of the third-place match, and the championship final scoreline.
     """
@@ -380,16 +412,19 @@ def simulate_knockout(
     final_scoreline = simulate_game(semi_winners)
     champion = semi_winners[get_knockout_winner(final_scoreline)]
 
-    knockout_results = [ro32_winners,
-                        third_place_teams,
-                        ro16_winners,
-                        quarters_winners,
-                        semi_winners,
-                        third_place,
-                        final_scoreline,
-                        champion
-                    ]
-    return knockout_results
+    knockout_log = KnockoutLog(
+        ro32_winners=ro32_winners,
+        third_place_teams=third_place_teams,
+        ro16_winners=ro16_winners,
+        quarters_winners=quarters_winners,
+        semi_winners=semi_winners,
+        third_place=third_place,
+        final_scoreline=final_scoreline,
+        champion=champion,
+    )
+
+    return knockout_log
+
 
 def simulate_tournament() -> TournamentLog:
     """
@@ -401,7 +436,7 @@ def simulate_tournament() -> TournamentLog:
 
     Returns
     -------
-    tourney_log (TournamentLog): a log of the relevant
+    tournament_log (TournamentLog): a log of the relevant
         results of the entire tournament
     """
 
@@ -409,19 +444,19 @@ def simulate_tournament() -> TournamentLog:
 
     knockout_results = simulate_knockout(groups, get_third_place_teams(groups))
 
-    tourney_log = get_tourney_log(groups, knockout_results)
+    tournament_log = get_tournament_log(groups, knockout_results)
 
-    return tourney_log
+    return tournament_log
 
 
-def get_tourney_log(
+def get_tournament_log(
     groups: list[Group],
     knockout_results: KnockoutLog,
 ) -> TournamentLog:
     """
     Construct a log of the group stage and knockout stage results for the
     entire simulated world cup.
-    
+
     Parameters
     ----------
     groups (list[Group): the list of all simulated groups ordered from A-L.
@@ -431,27 +466,31 @@ def get_tourney_log(
 
     Returns
     -------
-    tourney_log (list[list[list[str] | str | int]]): a log of the relevant
+    tournament_log (list[list[list[str] | str | int]]): a log of the relevant
         results of the entire tournament
     """
     group_rankings = [[team.name for team in group.teams] for group in groups]
-    ro32_winner_names = [team.name for team in knockout_results[0]]
-    ro16_winner_names = [team.name for team in knockout_results[2]]
-    quarters_winner_names = [team.name for team in knockout_results[3]]
-    semi_winner_names = [team.name for team in knockout_results[4]]
-    third_place_name = knockout_results[5].name
-    final_scoreline = knockout_results[6]
-    champ_name = knockout_results[7].name
-    third_place_advancer_names = [team.name for team in knockout_results[1]]
+    third_place_advancer_names = [
+        team.name for team in knockout_results.third_place_teams
+    ]
+    ro32_winner_names = [team.name for team in knockout_results.ro32_winners]
+    ro16_winner_names = [team.name for team in knockout_results.ro16_winners]
+    quarters_winner_names = [team.name for team in knockout_results.quarters_winners]
+    semi_winner_names = [team.name for team in knockout_results.semi_winners]
+    third_place_name = knockout_results.third_place.name
+    final_scoreline = knockout_results.final_scoreline
+    champ_name = knockout_results.champion.name
 
-    tourney_log = [group_rankings,
-                   ro32_winner_names,
-                   ro16_winner_names,
-                   quarters_winner_names,
-                   semi_winner_names,
-                   third_place_name,
-                   champ_name,
-                   final_scoreline,
-                   third_place_advancer_names]
+    tournament_log = TournamentLog(
+        group_rankings=group_rankings,
+        third_place_advancer_names=third_place_advancer_names,
+        ro32_winner_names=ro32_winner_names,
+        ro16_winner_names=ro16_winner_names,
+        quarters_winner_names=quarters_winner_names,
+        semi_winner_names=semi_winner_names,
+        third_place_name=third_place_name,
+        champ_name=champ_name,
+        final_scoreline=final_scoreline,
+    )
 
-    return tourney_log
+    return tournament_log

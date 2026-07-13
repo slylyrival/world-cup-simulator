@@ -19,16 +19,27 @@ Other Objects
 None
 
 """
+
 import itertools
 from collections import Counter
-from typing import TypeAlias
+from typing import TypeAlias, TypedDict
 
 TournamentLog: TypeAlias = list[list[list[str] | str | int]]
-EVTable: TypeAlias = dict[str, list[list[Counter]] | list[Counter] | Counter]
 
-def build_ev_tables(
-        worlds: list[TournamentLog]
-) -> EVTable:
+
+class EVTable(TypedDict):
+    n: int
+    group_pos: list[list[Counter[str]]]
+    group_exact: list[Counter[tuple[str, str, str, str]]]
+    ro32: list[Counter[str]]
+    ro16: list[Counter[str]]
+    qf: list[Counter[str]]
+    sf: list[Counter[str]]
+    third: Counter[str]
+    champ: Counter[str]
+
+
+def build_ev_tables(worlds: list[TournamentLog]) -> EVTable:
     """
     This function takes the logs of all the simulated tournament 'worlds' and
     calculates a dictionary of total points for each group stage order or team
@@ -50,16 +61,16 @@ def build_ev_tables(
     group_exact = [Counter() for _ in range(12)]
 
     kos = (
-            [Counter() for _ in range(16)],
-            [Counter() for _ in range(8)],
-            [Counter() for _ in range(4)],
-            [Counter() for _ in range(2)],
-            Counter(),
-            Counter()
-            )
+        [Counter() for _ in range(16)],
+        [Counter() for _ in range(8)],
+        [Counter() for _ in range(4)],
+        [Counter() for _ in range(2)],
+        Counter(),
+        Counter(),
+    )
 
     for world in worlds:
-        groups = world[0]
+        groups = world.group_rankings
 
         for g in range(12):
             order = tuple(groups[g])
@@ -68,19 +79,19 @@ def build_ev_tables(
             for pos in range(4):
                 group_pos[g][pos][groups[g][pos]] += 1
 
-        for i, team in enumerate(world[1]):
+        for i, team in enumerate(world.ro32_winner_names):
             kos[0][i][team] += 1
-        for i, team in enumerate(world[2]):
+        for i, team in enumerate(world.ro16_winner_names):
             kos[1][i][team] += 1
-        for i, team in enumerate(world[3]):
+        for i, team in enumerate(world.quarters_winner_names):
             kos[2][i][team] += 1
-        for i, team in enumerate(world[4]):
+        for i, team in enumerate(world.semi_winner_names):
             kos[3][i][team] += 1
 
-        kos[4][world[5]] += 1
-        kos[5][world[6]] += 1
+        kos[4][world.third_place_name] += 1
+        kos[5][world.champ_name] += 1
 
-    return {
+    ev_table: EVTable = {
         "n": n,
         "group_pos": group_pos,
         "group_exact": group_exact,
@@ -92,10 +103,10 @@ def build_ev_tables(
         "champ": kos[5],
     }
 
-def score_candidate_ev(
-    candidate: TournamentLog,
-    tables: dict
-) -> int:
+    return ev_table
+
+
+def score_candidate_ev(candidate: TournamentLog, tables: EVTable) -> float:
     """
     This function scores a candidate tournament log against the EV table.
 
@@ -105,7 +116,7 @@ def score_candidate_ev(
         candidate tournament.
     tables (EVtable): The table of expected values against which to score
         the candidate
-    
+
     Returns
     -------
     ev (int): the expected value of the score of the candidate entry.
@@ -114,7 +125,7 @@ def score_candidate_ev(
     ev = 0
 
     # Groups
-    for g, group_order in enumerate(candidate[0]):
+    for g, group_order in enumerate(candidate.group_rankings):
         group_order = tuple(group_order)
 
         for pos, team in enumerate(group_order):
@@ -123,22 +134,23 @@ def score_candidate_ev(
         ev += 3 * tables["group_exact"][g][group_order] / n
 
     # Knockouts
-    for i, team in enumerate(candidate[1]):
+    for i, team in enumerate(candidate.ro32_winner_names):
         ev += 2 * tables["ro32"][i][team] / n
 
-    for i, team in enumerate(candidate[2]):
+    for i, team in enumerate(candidate.ro16_winner_names):
         ev += 4 * tables["ro16"][i][team] / n
 
-    for i, team in enumerate(candidate[3]):
+    for i, team in enumerate(candidate.quarters_winner_names):
         ev += 6 * tables["qf"][i][team] / n
 
-    for i, team in enumerate(candidate[4]):
+    for i, team in enumerate(candidate.semi_winner_names):
         ev += 8 * tables["sf"][i][team] / n
 
-    ev += 2 * tables["third"][candidate[5]] / n
-    ev += 16 * tables["champ"][candidate[6]] / n
+    ev += 2 * tables["third"][candidate.third_place_name] / n
+    ev += 16 * tables["champ"][candidate.champ_name] / n
 
     return ev
+
 
 def score_group(predicted: list[str], actual: list[str]) -> int:
     """
@@ -169,10 +181,10 @@ def score_group(predicted: list[str], actual: list[str]) -> int:
 
     return score
 
+
 def get_best_group_orders(
-    group_index: int,
-    worlds: list[TournamentLog]
-) -> list[tuple[int, list[str]]]:
+    group_index: int, worlds: list[TournamentLog]
+) -> list[tuple[float, list[str]]]:
     """
     Sort the permutations of a group's rankings by highest group stage EV.
 
@@ -184,11 +196,11 @@ def get_best_group_orders(
 
     Returns
     -------
-    results (list[tuple[int, list[str]]]): A list of tuples containing the EV
+    results (list[tuple[float, list[str]]]): A list of tuples containing the EV
         and a group ranking permutation for a given group, sorted highest EV
         to lowest EV.
     """
-    actual_orders = [world[0][group_index] for world in worlds]
+    actual_orders = [world.group_rankings[group_index] for world in worlds]
 
     results = []
 
