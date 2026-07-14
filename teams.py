@@ -1,7 +1,11 @@
 """Define World Cup teams and construct team instances from rating data.
 
-Class Team contains attributes for a 2026 WC team.
-Function make_team makes a Team instance from the TEAM_DATA dictionary.
+The class Team contains attributes for a 2026 WC team. The function make_team makes a T
+Team instance from the TEAM_DATA dictionary. 
+
+Typical usage:
+    football_team = Team("Country", 1500)
+    make_team("Country")
 
 """
 
@@ -10,29 +14,15 @@ from dataclasses import dataclass
 
 @dataclass
 class Team:
-    """A class to represent a World Cup team.
+    """A football team at the 2026 World Cup.
 
-    Attributes
-    ----------
-    name: str
-        the country name of the team
-    elo: int
-        the elo rating of the team
-    gf: int
-        the goals scored by the team
-    ga: int
-        the goals scored against the team
-    pts: int
-        points scored in the group stage
-    group: str
-        the letter of the group the team belongs to in the group stage
-
-    Methods
-    -------
-    gd():
-        Returns the current goal differential of the team
-
-
+    Attributes:
+        name: the country name of the team
+        elo: the elo rating of the team
+        gf: the goals scored by the team
+        ga: the goals scored against the team
+        pts: points scored in the group stage
+        group:  the letter of the group the team belongs to in the group stage
     """
 
     name: str
@@ -44,18 +34,7 @@ class Team:
 
     @property
     def gd(self) -> int:
-        """
-        Returns goal differntial for the Team.
-
-        Parameters
-        ----------
-        None
-
-        Returns
-        -------
-        (int)
-        """
-        # calculates goal difference from GF - GA
+        """The goal differential for the Team."""
         return self.gf - self.ga
 
 

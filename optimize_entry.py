@@ -9,7 +9,7 @@ from teams import make_team
 
 def main() -> None:
     """
-    Runs simulations of the 2026 Fifa World Cup and prints the highest EV entry.
+    Runs simulations of the 2026 FIFA World Cup and prints the highest EV entry.
 
     This script runs simulations of the 2026 FIFA World Cup for Ace Ray's Pool
     and prints the entry with the highest expected value against the scoring
@@ -27,7 +27,7 @@ def main() -> None:
         5. Score each of the candidates in Step 4 against the Worlds from Step 1
             and select the candidate with the highest EV score.
     """
-    ### GENERATE WORLDS ###
+    # Generate possible tournament outcomes.
     print("Generating possible worlds...")
 
     NUM_WORLD_SIMULATIONS = 1  # 00_000 # number of simulations

@@ -1,32 +1,4 @@
-"""
-Perform simulations of world cup matches, group stages, and knockout rounds.
-
-Classes
--------
-None
-
-Functions
----------
-simulate_game: return the scoreline for a game between two teams
-simulate_group: simulate all group stage games in a group
-add_group_game_results: update teams' attributes after fixture
-print_group_results: print a group's current standings
-get_third_place_teams: get list of advancing third place teams
-get_random_third_place_teams: get random list of advancing third place teams
-get_ro32_teams: returns list of the round of 32 teams
-get_ko_round_winners: simulate a knockout round and return winners
-get_knockout_winner: return either 0 or 1 based on scoreline
-simulate_knockout: simulate the knockout stage of the world cup
-simulate_tournament: simulate the entire world cup
-get_tournament_log: construct a log of the results of the simulated WC
-
-
-Other Objects
--------------
-THIRD_PLACE_DICT (dict): a dictionary with the set of advancing third place
-    teams as keys and an ordered list of those teams as values
-
-"""
+"""Simulate World Cup matches, groups, knockout rounds, and tournaments."""
 
 from dataclasses import dataclass
 import math
@@ -43,6 +15,8 @@ TournamentLog: TypeAlias = list[list[list[str] | str | int]]
 
 @dataclass
 class KnockoutLog:
+    """The winners of each match in the knockout stage of the World Cup."""
+
     ro32_winners: list[Team]
     third_place_teams: list[Team]
     ro16_winners: list[Team]
@@ -55,6 +29,8 @@ class KnockoutLog:
 
 @dataclass
 class TournamentLog:
+    """The WC group stage results, 3rd place advancers, and knockout stage results."""
+
     group_rankings: list[list[str]]
     third_place_advancer_names: list[str]
     ro32_winner_names: list[str]
@@ -83,18 +59,14 @@ with open("third_place_table.txt", "r", encoding="utf-8") as f:
         THIRD_PLACE_DICT[advancing_groups] = ordered_matchups
 
 
-def simulate_game(teams: list[Team]) -> tuple[int, int]:
-    """
-    Return the scoreline for a simulated game between two teams.
+def simulate_match(teams: list[Team]) -> tuple[int, int]:
+    """Simulate a match between two teams.
 
-    Parameters
-    ----------
-    teams (list[Team]): a list of two teams playing a match
+    args:
+        teams : the two teams in a match
 
-    Returns
-    -------
-    scoreline (tuple(int, int)): a list of the teams' scores, e.g. [2,0]
-
+    Returns:
+        scoreline: the scoreline of the match, e.g. [2,0]
     """
 
     delta = (teams[0].elo - teams[1].elo) / 400
@@ -141,16 +113,13 @@ def simulate_game(teams: list[Team]) -> tuple[int, int]:
 
 def simulate_group(group: Group) -> Group:
     """
-    Return the final group stage results for a group.
+    Simulate a single group's matches at the World Cup.
 
-    Parameters
-    ----------
-    group (Group): the initialized group to be simulated
+    args:
+        group: the initialized group to be simulated
 
-    Returns
-    -------
-    group (Group): the group with all teams points and tie-breakers simulated
-        and sorted
+    Returns:
+        group: the group with final statistics and teams ranked
     """
     pairings = [
         [group.teams[0], group.teams[1]],
@@ -162,30 +131,26 @@ def simulate_group(group: Group) -> Group:
     ]
 
     for matchup in pairings:
-        scoreline = simulate_game(matchup)
-        add_group_game_results(matchup[0], matchup[1], scoreline)
+        scoreline = simulate_match(matchup)
+        add_group_match_results(matchup[0], matchup[1], scoreline)
 
     group.sort_group()
 
     return group
 
 
-def add_group_game_results(
+def add_group_match_results(
     team1: Team, team2: Team, scoreline: tuple[int, int]
 ) -> None:
     """
     Update the teams' PTS, GF, and GA attributes after a match.
 
-    Parameters
-    ----------
-    team1 (Team): the first team in the matchup
-    team2 (Team): the second team in the matchup
-    scoreline (tuple(int, int)): the scoreline between the two teams, e.g. [2,0]
-
-    Returns
-    -------
-    None
+    args:
+        team1: the first team in the matchup
+        team2: the second team in the matchup
+        scoreline: the result of the match between the two teams, e.g. [2,0]
     """
+
     team1.gf += scoreline[0]
     team1.ga += scoreline[1]
     team2.gf += scoreline[1]
@@ -204,14 +169,8 @@ def print_group_results(group: Group) -> None:
     """
     Print a group's current standings.
 
-    Parameters
-    ----------
-    group (Group): the group to be printed
-
-    Returns
-    -------
-    None
-
+    args:
+        group: the group to be printed
     """
     print(group.name)
     print("\n")
@@ -222,37 +181,38 @@ def print_group_results(group: Group) -> None:
 
 def get_third_place_teams(groups: list[Group]) -> list[Team]:
     """
-    Given the final group stage results, return the ordered list of third-place
-    teams that will advance to play the first-place teams from A,B,D,E,G,I,K,L.
+    Determine which third place teams will advance from the group stage to knockout."
 
-    Parameters
-    ----------
-    groups (list[Group]): the list of all simulated groups after all groups
-        have been simulated, ordered from A-L.
+    Given the final group stage results, return the list of third-place
+    teams that will advance to play the first-place teams in the Round of 32. The list
+    of 3rd place teams is ordered by matchup assignment. In order, the teams will play
+    the first place team from A, B, D, E, G, I, K, L.
 
-    Returns
-    -------
-    ordered_teams (list[Team]): the list of teams in order playing
-        the first place teams from A,B,D,E,G,I,K,L.
+    args:
+        groups: all simulated groups at the end of the group stage, ordered from A-L.
 
+    Returns:
+        ordered_teams: 3rd place advancing teams in matchup order playing
+            the first place teams from A, B, D, E, G, I, K, L.
     """
 
     third_place_teams = [group.teams[2] for group in groups]
 
     # GD, GF, GA, and coinflip are used as tie-breaking criteria.
     # Team conduct is not currently in the model, so it is not used.
+
     third_place_teams = sorted(
         third_place_teams,
         key=lambda team: (team.pts, team.gd, team.gf, -team.ga, random.random()),
         reverse=True,
     )
 
-    # frozenset allows top_eight to be used as dict key.
     top_eight = frozenset([team.group for team in third_place_teams[0:8]])
 
     # ordered_groups is the group IDs that will play 1A,1B,1D,1E,1G,1I,1K,1L.
     # For example, if EFGHIJKL advance, then it is [E,J,I,F,H,G,L,K].
     # Then, ordered_teams makes the list of appropriate teams.
+
     ordered_groups = THIRD_PLACE_DICT[top_eight]
 
     ordered_teams = [third_place_teams[ord(group) - 65] for group in ordered_groups]
@@ -262,22 +222,21 @@ def get_third_place_teams(groups: list[Group]) -> list[Team]:
 
 def get_random_third_place_teams(groups: list[Group]) -> list[Team]:
     """
+    Return randomly selected third place teams to advance to KO stage.
+
     Given a list of groups that have been ordered but not actually simulated,
     return a random list of eight third place teams that will advance to play
-    the first-place teams from A,B,D,E,G,I,K,L.
+    the first-place teams from A,B,D,E,G,I,K,L. After the best group stage orders have
+    been determined and the knockout stage needs to be simulated, without full points
+    and goals data the top eight third place teams cannot be determined. This function
+    is used to randomly select eight third place teams to advance and put them in
+    matchup assignment order.
 
-    Parameters
-    ----------
-    groups (list[Group]): the list of all groups ordered from A-L.
-
-    Returns
-    -------
-    ordered_teams (list[Team]): the list of teams in order playing
-        the first place teams from A,B,D,E,G,I,K,L.
-
+    args:
+        groups (list[Group]): the list of all groups ordered from A-L.
     """
 
-    third_place_teams = [g.teams[2] for g in groups]
+    third_place_teams = [group.teams[2] for group in groups]
 
     sorted_third_place_teams = third_place_teams.copy()
     random.shuffle(sorted_third_place_teams)
@@ -286,24 +245,26 @@ def get_random_third_place_teams(groups: list[Group]) -> list[Team]:
 
     ordered_groups = THIRD_PLACE_DICT[top_eight]
 
-    ordered_teams = [third_place_teams[ord(g) - 65] for g in ordered_groups]
+    ordered_teams = [third_place_teams[ord(group) - 65] for group in ordered_groups]
 
     return ordered_teams
 
 
 def get_ro32_teams(groups: list[Group], third_place_teams: list[Team]) -> list[Team]:
     """
-    Form a list of RO32 teams such that 2n and 2n+1 play each other in the Ro32.
+    Return the 32 teams advancing to the round of 32 of the World Cup.
 
-    Parameters
-    ----------
-    groups (list[Group): the list of all simulated groups ordered from A-L.
-    third_place_teams (list[Team]): the list of third-place teams in order
-        playing the first place teams from A,B,D,E,G,I,K,L.
+    The list of 32 teams is formed such that 2n and 2n+1 play each other for n=0:16.
+    For example, ro32_teams[0] and ro32_teams[1] play each other, ro32_teams[14] and
+    ro32_teams[15] play each other, etc.
 
-    Returns
-    -------
-    ro32_teams (list[Team]): the list of Ro32 teams.
+    args:
+        groups: all simulated groups ordered from A-L.
+        third_place_teams: third-place teams in matchup order playing the first
+            place teams from A, B, D, E,G, I, K, L.
+
+    Returns:
+        ro32_teams: the list of Ro32 teams.
     """
 
     ro32_teams = [
@@ -322,7 +283,8 @@ def get_ro32_teams(groups: list[Group], third_place_teams: list[Team]) -> list[T
         groups[ 9].teams[0], groups[7].teams[1],   # 1J vs 2
         groups[ 3].teams[1], groups[6].teams[1],   # 2D vs 2G
         groups[ 1].teams[0], third_place_teams[1], # 1B vs E/F/G/I/J3
-        groups[10].teams[0], third_place_teams[6]] # 1K vs D/E/I/J/L3
+        groups[10].teams[0], third_place_teams[6] # 1K vs D/E/I/J/L3
+    ]
 
     return ro32_teams
 
@@ -331,22 +293,19 @@ def get_ko_round_winners(teams: list[Team]) -> list[Team]:
     """
     Simulate fixtures between teams in a knockout round and return winners.
 
-    Parameters
-    ----------
-    teams (list[Team]): the list of teams in the knockout round, where 2n and
-        2n+1 play each other
+    args:
+        teams: the teams in the knockout round, where 2n and 2n+1 play each other
 
-    Returns
-    -------
-    winners (list[Team]): the list of winners in the knockout round, where 2n
-        and 2n+1 play each other in the next round
+    Returns:
+        winners: the winners in the knockout round, where 2n and 2n+1 play each other
+            in the next round
     """
 
     winners = []
 
     for n in range(len(teams) // 2):
         matchup = [teams[2 * n], teams[2 * n + 1]]
-        score = simulate_game(matchup)
+        score = simulate_match(matchup)
         winners.append(matchup[get_knockout_winner(score)])
 
     return winners
@@ -356,17 +315,16 @@ def get_knockout_winner(score: tuple[int, int]) -> int:
     """
     From the scoreline of a match, return the index of the winner in the matchup.
 
-    Parameters
-    ----------
-    score (tuple(int, int)): the scoreline of a fixture, e.g. [2,0].
+    args:
+        score: the scoreline of a fixture, e.g. [2,0].
 
-    Returns
-    -------
-    winner (int): the index of the winner in a matchup, either 0 or 1.
+    Returns:
+        winner: the index of the winner in a matchup, either 0 or 1.
     """
 
     # If the score is a draw, just coinflip for the winner.
     # No logic for which team is better at penalties is implemented.
+
     if score[0] == score[1]:
         coinflip = random.random()
         if coinflip < 0.5:
@@ -385,20 +343,15 @@ def simulate_knockout(
     groups: list[Group], third_place_teams: list[Team]
 ) -> KnockoutLog:
     """
-    Simulate the knockout stage of the world cup and return results of all
-    rounds.
+    Simulate the knockout stage of the World Cup.
 
-    Parameters
-    ----------
-    groups (list[Group): the list of all simulated groups ordered from A-L.
-    third_place_teams (list[Team]): the list of third-place teams in order
-        playing the first place teams from A,B,D,E,G,I,K,L.
+    args:
+        groups: all simulated groups ordered from A-L.
+        third_place_teams: the third-place teams in order playing the first place
+            teams from A,B,D,E,G,I,K,L.
 
-    Returns
-    -------
-    knockout_log (KnockoutLog): a list of lists of the
-        winners of each round, the semi-final losers and results
-        of the third-place match, and the championship final scoreline.
+    Returns:
+        knockout_log (KnockoutLog): a log of top-level results of the knockout stage.
     """
 
     ro32_teams = get_ro32_teams(groups, third_place_teams)
@@ -407,9 +360,9 @@ def simulate_knockout(
     quarters_winners = get_ko_round_winners(ro16_winners)
     semi_winners = get_ko_round_winners(quarters_winners)
     semi_losers = [team for team in quarters_winners if team not in semi_winners]
-    third_place_scoreline = simulate_game(semi_losers)
+    third_place_scoreline = simulate_match(semi_losers)
     third_place = semi_losers[get_knockout_winner(third_place_scoreline)]
-    final_scoreline = simulate_game(semi_winners)
+    final_scoreline = simulate_match(semi_winners)
     champion = semi_winners[get_knockout_winner(final_scoreline)]
 
     knockout_log = KnockoutLog(
@@ -428,16 +381,11 @@ def simulate_knockout(
 
 def simulate_tournament() -> TournamentLog:
     """
-    Initialize all world cup groups and simulate the entire tournament.
+    Initialize all World Cup groups and simulate the entire tournament.
 
-    Parameters
-    ----------
-    None
-
-    Returns
-    -------
-    tournament_log (TournamentLog): a log of the relevant
-        results of the entire tournament
+    Returns:
+        tournament_log (TournamentLog): a log of the top-level results of the entire
+            tournament
     """
 
     groups = [simulate_group(g) for g in initialize_groups()]
@@ -455,19 +403,14 @@ def get_tournament_log(
 ) -> TournamentLog:
     """
     Construct a log of the group stage and knockout stage results for the
-    entire simulated world cup.
+    entire simulated World Cup.
 
-    Parameters
-    ----------
-    groups (list[Group): the list of all simulated groups ordered from A-L.
-    knockout_results (list[list[Team | int] | Team]): a list of lists of the
-        winners of each round, the semi-final losers and results
-        of the third-place match, and the championship final scoreline.
+    args:
+        groups: all simulated groups ordered from A-L.
+        knockout_results (KnockoutLog): a log of top-level results of the knockout stage
 
-    Returns
-    -------
-    tournament_log (list[list[list[str] | str | int]]): a log of the relevant
-        results of the entire tournament
+    Returns:
+        tournament_log: a log of the relevant results of the entire tournament
     """
     group_rankings = [[team.name for team in group.teams] for group in groups]
     third_place_advancer_names = [

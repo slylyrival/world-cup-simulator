@@ -1,10 +1,4 @@
-"""Define Group class and a method for initializing the teams in the 2026 WC.
-
-Class Group contains the group name and the teams in the group.
-
-Function initialize_groups creates and populates new Group instances for the 2026 WC.
-
-"""
+"""Define World Cup groups and initialize their participating teams."""
 
 from dataclasses import dataclass
 import random
@@ -14,19 +8,16 @@ from teams import Team, make_team
 
 @dataclass
 class Group:
-    """A class to represent a World Cup group.
+    """A World Cup group.
 
-    Attributes
-    ----------
-    name: str
-        the name of the group (e.g., 'Group A')
-    teams: list[Team]
-        a list of the four teams in the group
+    Attributes:
+        name: the name of the group (e.g., 'Group A')
+        teams: a list of the four teams in the group
 
     Methods
     -------
     sort_group():
-        Sorts the teams in the group by pts, GD, GF, GA, and cointoss.
+        Sorts the teams in the group by pts, GD, GF, GA, and coin toss.
 
 
     """
@@ -35,43 +26,22 @@ class Group:
     teams: list[Team]
 
     def sort_group(self) -> None:
-        """
-        Modifies the group's teams list in place to sort according to points
-        and tie-breaking criteria.
+        """Sorts the group's team list according to points and tie-breaking criteria."""
 
-        Parameters
-        ----------
-        None
+        # Tie breaking criteria are GD, GF, GA, and coin toss in that order.
+        # These are not the actual tie-breaking criteria for the 2026 WC, but they
+        # should be acceptable for this simulation level. Actual tie-breaking criteria
+        # involve fair play, which is not accounted for in this model.
 
-        Returns
-        -------
-        None
-
-        """
-
-        # I'm just going to pretend tie breaking criteria are GD, GF, GA, and
-        # coin toss in that order. This is not what it actually is. It does
-        # not matter for this simulation (probably).
         self.teams = sorted(
             self.teams,
             key=lambda team: (team.pts, team.gd, team.gf, -team.ga, random.random()),
             reverse=True,
         )
 
-
 def initialize_groups() -> list[Group]:
-    """
-    Creates a list of Group objects with initialized Teams for the 2026 WC.
+    """Returns a the 2026 World Cup Groups with initialized teams."""
 
-    Parameters
-    ----------
-    None
-
-    Returns
-    -------
-    groups (list[Group]): List of 2026 World Cup Groups.
-
-    """
     groups = [
         Group(
             "Group A",

@@ -1,33 +1,17 @@
-"""
-This module provides functions to evaluate and score world cup simulations.
+"""Evaluate and score World Cup simulations."""
 
-Classes
--------
-None
-
-Functions
----------
-build_ev_tables: take all the world simulations and build a table of points
-    scored for group stage orders and knockout stage results
-score_candidate_ev: get the expected value for the score of a candidate simulation
-score_group: return the score of a predicted group against an "actual" group
-get_best_group_orders: return the permutations of a groups teams sorted from
-    highest ev to lowest ev
-
-Other Objects
--------------
-None
-
-"""
-
-import itertools
 from collections import Counter
+import itertools
 from typing import TypeAlias, TypedDict
 
 TournamentLog: TypeAlias = list[list[list[str] | str | int]]
 
 
 class EVTable(TypedDict):
+    """
+    A table of total points based on evaluating world simulations used to score
+    candidate entries.
+    """
     n: int
     group_pos: list[list[Counter[str]]]
     group_exact: list[Counter[tuple[str, str, str, str]]]
@@ -41,19 +25,18 @@ class EVTable(TypedDict):
 
 def build_ev_tables(worlds: list[TournamentLog]) -> EVTable:
     """
+    Build table of points earned for group rankings and knockout winners.
+
     This function takes the logs of all the simulated tournament 'worlds' and
     calculates a dictionary of total points for each group stage order or team
     result that a candidate can score in.
 
-    Parameters
-    ----------
-    worlds (list[TournamentLog]): A list of tourney_logs for
-        all of the simulated tournaments
+    args:
+        worlds: A list of tournament_logs for all of the simulated tournaments
 
-    Returns
-    -------
-    (EVTable) Total points for a candidate simulation to receive for each point
-        scoring opportunity evaluated against all possible worlds
+    Returns:
+        (EVTable) Total points for a candidate simulation to receive for each point
+            scoring opportunity evaluated against all possible worlds
     """
     n = len(worlds)
 
@@ -108,23 +91,20 @@ def build_ev_tables(worlds: list[TournamentLog]) -> EVTable:
 
 def score_candidate_ev(candidate: TournamentLog, tables: EVTable) -> float:
     """
-    This function scores a candidate tournament log against the EV table.
+    Score a candidate tournament log against the EV table.
 
-    Parameters
-    ----------
-    candidate (TournamentLog): The tourney_log of the
-        candidate tournament.
-    tables (EVtable): The table of expected values against which to score
-        the candidate
+    args:
+        candidate: The log of the candidate tournament.
+        tables: The table of expected values against which to score the candidate
 
-    Returns
-    -------
-    ev (int): the expected value of the score of the candidate entry.
+    Returns:
+        ev: the expected value of the score of the candidate entry.
     """
     n = tables["n"]
     ev = 0
 
     # Groups
+
     for g, group_order in enumerate(candidate.group_rankings):
         group_order = tuple(group_order)
 
@@ -134,6 +114,7 @@ def score_candidate_ev(candidate: TournamentLog, tables: EVTable) -> float:
         ev += 3 * tables["group_exact"][g][group_order] / n
 
     # Knockouts
+
     for i, team in enumerate(candidate.ro32_winner_names):
         ev += 2 * tables["ro32"][i][team] / n
 
@@ -156,17 +137,11 @@ def score_group(predicted: list[str], actual: list[str]) -> int:
     """
     Return the group stage score for a given group order against an 'actual' order.
 
-    Parameters
-    ----------
-    predicted (list[str]): a list of team names representing a possible permutation
-        of group stage results
-    actual (list[str]): a list of team names representing the actual results from
-        a given simulation
-
-    Returns
-    -------
-    score (int): the score of the predicted group order evaluated against the
-        actual order
+    args:
+        predicted: list of team names representing a possible permutation
+            of group stage results
+        actual: a list of team names representing the actual results from
+            a given simulation
     """
     score = 0
     correct_positions = 0
@@ -188,17 +163,13 @@ def get_best_group_orders(
     """
     Sort the permutations of a group's rankings by highest group stage EV.
 
-    Parameters
-    ----------
-    group_index (int): an index for which group to evaluate (0=A, 1=B, etc.)
-    worlds (list[TournamentLog)]: a list of tourney logs for
-        all simulated worlds
+    args:
+        group_index: an index for which group to evaluate (0=A, 1=B, etc.)
+        worlds: a list of tournament logs for all simulated worlds
 
-    Returns
-    -------
-    results (list[tuple[float, list[str]]]): A list of tuples containing the EV
-        and a group ranking permutation for a given group, sorted highest EV
-        to lowest EV.
+    Returns:
+        results: the EV and a group ranking permutation for a given group, sorted
+            highest EV to lowest EV.
     """
     actual_orders = [world.group_rankings[group_index] for world in worlds]
 
