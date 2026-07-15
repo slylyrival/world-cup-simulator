@@ -13,20 +13,13 @@ class Group:
     Attributes:
         name: the name of the group (e.g., 'Group A')
         teams: a list of the four teams in the group
-
-    Methods
-    -------
-    sort_group():
-        Sorts the teams in the group by pts, GD, GF, GA, and coin toss.
-
-
     """
 
     name: str
     teams: list[Team]
 
     def sort_group(self) -> None:
-        """Sorts the group's team list according to points and tie-breaking criteria."""
+        """Sort the group's team list according to points and tie-breaking criteria."""
 
         # Tie breaking criteria are GD, GF, GA, and coin toss in that order.
         # These are not the actual tie-breaking criteria for the 2026 WC, but they
@@ -39,8 +32,9 @@ class Group:
             reverse=True,
         )
 
+
 def initialize_groups() -> list[Group]:
-    """Returns a the 2026 World Cup Groups with initialized teams."""
+    """Return the 2026 World Cup Groups with initialized teams."""
 
     groups = [
         Group(

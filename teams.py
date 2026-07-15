@@ -1,11 +1,11 @@
 """Define World Cup teams and construct team instances from rating data.
 
-The class Team contains attributes for a 2026 WC team. The function make_team makes a T
-Team instance from the TEAM_DATA dictionary. 
+The class Team contains attributes for a 2026 WC team. The function make_team makes a
+Team instance from the TEAM_DATA dictionary.
 
 Typical usage:
-    football_team = Team("Country", 1500)
-    make_team("Country")
+    custom_team = Team("Country", 1500)
+    mexico = make_team("Mexico")
 
 """
 
@@ -39,17 +39,13 @@ class Team:
 
 
 def make_team(team_key: str) -> Team:
-    """
-    Return a new Team object
+    """Return a new Team object.
 
-    Parameters
-    ----------
-    team_key (str): the key to TEAM_DATA dictionary identifying the team
+    Args:
+        team_key: Country name used as the 'TEAM_DATA' key.
 
-    Returns
-    -------
-    (Team) the new Team
-
+    Returns:
+        A newly initialized Team.
     """
     name, elo = TEAM_DATA[team_key]
     return Team(name, elo)
